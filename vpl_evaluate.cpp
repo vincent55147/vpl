@@ -1456,7 +1456,7 @@ void Evaluation::outputEvaluation( ) {
 	const char* stest[]={" test","tests"};
 	if (testCases.size() > 0) {
 		
-		if (ncomments > 1) {
+		if (ncomments > 1&&show==1) {
 			printf("\n<|--\n");
 			printf("-Failed tests\n");
 			for (int i = 0; i < ncomments; i++) {

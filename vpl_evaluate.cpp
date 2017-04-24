@@ -32,7 +32,7 @@ const int MAXCOMMENTS = 20;
 const int MAXCOMMENTSLENGTH = 100*1024;
 const int MAXCOMMENTSTITLELENGTH = 1024;
 const int MAXOUTPUT = 256* 1024 ;//256Kb
-
+int show;
 /**
  * Class Tools Declaration
  */
@@ -233,6 +233,8 @@ class TestCase {
 	vector< OutputChecker* > output;
 	string caseDescription;
 	float gradeReduction;
+	
+	
 	float gradeReductionApplied;
 	string programOutputBefore, programOutputAfter, programInput;
 
@@ -268,6 +270,7 @@ class Evaluation {
 	float grademin, grademax;
 	bool noGrade;
 	float grade;
+	
 	int nerrors, nruns;
 	vector<TestCase> testCases;
 	char comments[MAXCOMMENTS + 1][MAXCOMMENTSLENGTH + 1];
@@ -277,7 +280,7 @@ class Evaluation {
 	volatile bool stopping;
 	static Evaluation *singlenton;
 	Evaluation();
-
+    
 public:
 	static Evaluation* getSinglenton();
 	static void deleteSinglenton();
@@ -1010,6 +1013,7 @@ TestCase::TestCase(int id, const string &input, const vector<string> &output,
 	}
 	this->caseDescription = caseDescription;
 	this->gradeReduction = gradeReduction;
+	//printf("Signal1 %d\n",show);
 	outputTooLarge = false;
 	programTimeout = false;
 	executionError = false;
@@ -1076,8 +1080,8 @@ string TestCase::getComment() {
 	if (executionError) {
 		ret += executionErrorReason + string("\n");
 	}
-	/*
-	if (!correctOutput) {
+    //printf("Signal5 %d\n",show);
+	if (!correctOutput&&show==1) {
 		ret += "Incorrect program result\n";
 		ret += " --- Input ---\n";
 		ret += Tools::caseFormat(input);
@@ -1088,7 +1092,7 @@ string TestCase::getComment() {
 			ret += Tools::caseFormat(output[0]->studentOutputExpected());
 		}
 	}
-	*/
+	
 	return ret;
 }
 
@@ -1220,6 +1224,7 @@ void Evaluation::addTestCase(string &input, vector<string> &output,
 	input = "";
 	output.resize(0);
 	caseDescription = "";
+	
 	gradeReduction = std::numeric_limits<float>::min();
 }
 
@@ -1246,6 +1251,7 @@ void Evaluation::loadTestCases(string fname) {
 	const char *OUTPUT_TAG = "output=";
 	const char *OUTPUT_END_TAG = "outputend=";
 	const char *GRADEREDUCTION_TAG = "gradereduction=";
+	const char *SHOW_TAG="show=";
 	enum {
 		regular, ininput, inoutput
 	} state, newstate;
@@ -1258,6 +1264,8 @@ void Evaluation::loadTestCases(string fname) {
 	string output = "";
 	string caseDescription = "";
 	string tag, value;
+	show=1;
+	//printf("Signal2 %d\n",show);
 	float gradeReduction = std::numeric_limits<float>::min();
 	/*must be changed from String
 	 * to pair type (regexp o no) and string*/
@@ -1285,7 +1293,7 @@ void Evaluation::loadTestCases(string fname) {
 					continue; //Next line
 				}
 			} else if (tag.size() && (tag == OUTPUT_TAG || tag
-					== GRADEREDUCTION_TAG || tag == CASE_TAG)) {//New valid tag
+					== GRADEREDUCTION_TAG || tag == CASE_TAG||tag == SHOW_TAG)) {//New valid tag
 				state = regular;
 				//Go on to process the current tag
 			} else {
@@ -1306,7 +1314,7 @@ void Evaluation::loadTestCases(string fname) {
 					continue; //Next line
 				}
 			} else if (tag.size() && (tag == INPUT_TAG || tag == OUTPUT_TAG
-					|| tag == GRADEREDUCTION_TAG || tag == CASE_TAG)) {//New valid tag
+					|| tag == GRADEREDUCTION_TAG || tag == CASE_TAG||tag == SHOW_TAG)) {//New valid tag
 				removeLastNL(output);
 				outputs.push_back(output);
 				output = "";
@@ -1343,6 +1351,12 @@ void Evaluation::loadTestCases(string fname) {
 				}else{
 					gradeReduction = atof(value.c_str());
 				}
+			}else if (tag == SHOW_TAG) {
+				inCase = true;
+				
+				value=Tools::trim(value);
+				show=atoi(value.c_str());
+				//printf("Signal3 %d\n",show);
 			} else if (tag == INPUT_END_TAG) {
 				inputEnd = Tools::trim(value);
 			} else if (tag == OUTPUT_END_TAG) {
@@ -1438,9 +1452,10 @@ void Evaluation::runTests() {
 	}
 }
 
-void Evaluation::outputEvaluation() {
+void Evaluation::outputEvaluation( ) {
 	const char* stest[]={" test","tests"};
 	if (testCases.size() > 0) {
+		
 		if (ncomments > 1) {
 			printf("\n<|--\n");
 			printf("-Failed tests\n");
@@ -1449,8 +1464,8 @@ void Evaluation::outputEvaluation() {
 			}
 			printf("--|>\n");
 		}
-		/* 
-		if (ncomments > 0) {
+		 
+		if (ncomments > 0&&show==1) {
 			printf("\n<|--\n");
 			for (int i = 0; i < ncomments; i++) {
 				printf("-%s", titlesGR[i]);
@@ -1458,7 +1473,7 @@ void Evaluation::outputEvaluation() {
 			}
 			printf("--|>\n");
 		}
-		*/ 
+		
 		if (nruns > 0) {
 			int passed=nruns-nerrors;
 			printf("\n<|--\n");
@@ -1534,5 +1549,6 @@ int main(int argc, char *argv[], const char **env) {
 	obj->loadTestCases("evaluate.cases");
 	obj->runTests();
 	obj->outputEvaluation();
+	
 	return EXIT_SUCCESS;
 }
